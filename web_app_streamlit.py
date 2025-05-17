@@ -36,42 +36,6 @@ def execute_query(conn, query, params=None):
         return pd.DataFrame()
 
 
-# --- Data Loading with Null Handling (Handles np.nan and "None" string) ---
-def load_data_to_mysql():
-    conn = create_connection()
-    if conn:
-        try:
-            # Load data from CSV files
-            df_category = pd.read_csv("category_table.csv")
-            df_complexes = pd.read_csv("complex_table.csv")
-            df_competitor = pd.read_csv("competitor_table.csv")
-
-            with conn.cursor() as cursor:
-                #  Function to insert data in chunks, handling NaN and "None" string
-                def insert_data_chunked(df, table_name, cursor, conn, chunk_size=1000):
-                    for i in range(0, len(df), chunk_size):
-                        chunk = df.iloc[i:i + chunk_size].copy()  # Create a copy
-
-                        # Replace NaN and the string "None" with None
-                        chunk = chunk.replace({np.nan: None, "None": None})
-
-                        cols = ", ".join(chunk.columns)
-                        values_template = ", ".join(["%s"] * len(chunk.columns))
-                        insert_query = f"INSERT INTO {table_name} ({cols}) VALUES ({values_template})"
-                        data = [tuple(row) for row in chunk.itertuples(index=False, name=None)]
-
-                        cursor.executemany(insert_query, data)
-                        conn.commit()  # Commit after each chunk
-
-                insert_data_chunked(df_category, "category_table", cursor, conn) #since only competitior data has none values
-
-            conn.close()
-
-        except FileNotFoundError:
-            st.error("Error: One or more CSV files not found.")
-
-
-
 # --- Streamlit Application ---
 st.set_page_config(layout="wide")
 def main():
